@@ -9,6 +9,11 @@
 #include <stdint.h>
 #include <assert.h>
 
+// Comparison results
+#define COMP_ERROR -1
+#define COMP_TRUE 1
+#define COMP_FALSE 0
+
 typedef struct {
 	uint8_t num_sections;
 	int *sections;
@@ -62,47 +67,47 @@ int min_sections(const version_t *v1, const version_t *v2) {
 	if (!v1 || !v2) { \
 		free_version(v1); \
 		free_version(v2); \
-		return -1; \
+		return COMP_ERROR; \
 	} \
 
 // used at the end of a comparison funtion that takes two
 // strings as the versions
-#define COMP_END \
+#define COMP_FUNC_END \
 cleanup: \
 	free_version(v1); \
 	free_version(v2); \
 	return rv; \
 
 int vt_eq(const version_t *v1, const version_t *v2) {
-	int rv = 0;
+	int rv = COMP_FALSE;
 	int sections = min_sections(v1, v2);
-	if (v1->num_sections != v2->num_sections) return 0;
+	if (v1->num_sections != v2->num_sections) return COMP_FALSE;
 	for (int i=0; i < sections; i++) {
-		if (v1->sections[i] != v2->sections[i]) return 0;
+		if (v1->sections[i] != v2->sections[i]) return COMP_FALSE;
 	}
-	return 1;
+	return COMP_TRUE;
 }
 
 int vt_ne(const version_t *v1, const version_t *v2) {
 	int rv = vt_eq(v1, v2);
-	if (rv < 0) return rv;
-	return rv == 1 ? 0 : 1;
+	if (rv == COMP_ERROR) return rv;
+	return rv == COMP_TRUE ? COMP_FALSE : COMP_TRUE;
 }
 
 int vt_gt(const version_t *v1, const version_t *v2) {
 	int sections = min_sections(v1, v2);
 	for (int i=0; i < sections; i++) {
-		if (v1->sections[i] > v2->sections[i]) return 1;
-		if (v1->sections[i] < v2->sections[i]) return 0;
+		if (v1->sections[i] > v2->sections[i]) return COMP_TRUE;
+		if (v1->sections[i] < v2->sections[i]) return COMP_FALSE;
 	}
-	if (v1->num_sections > v2->num_sections) return 1;
-	return 0;
+	if (v1->num_sections > v2->num_sections) return COMP_TRUE;
+	return COMP_FALSE;
 }
 
 int vt_ge(const version_t *v1, const version_t *v2) {
 	int rv = vt_eq(v1, v2);
-	if (rv == -1) return -1;
-	if (rv == 1) return 1;
+	if (rv == COMP_ERROR) return COMP_ERROR;
+	if (rv == COMP_TRUE) return COMP_TRUE;
 	return vt_gt(v1, v2);
 }
 
@@ -112,33 +117,33 @@ int vt_lt(const version_t *v1, const version_t *v2) {
 
 int vt_le(const version_t *v1, const version_t *v2) {
 	int rv = vt_eq(v1, v2);
-	if (rv == -1) return -1;
-	if (rv == 1) return 1;
+	if (rv == COMP_ERROR) return COMP_ERROR;
+	if (rv == COMP_TRUE) return COMP_TRUE;
 	return vt_lt(v1, v2);
 }
 
 int v_eq(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_eq(v1, v2);
-COMP_END
+COMP_FUNC_END
 }
 
 int v_ne(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_ne(v1, v2);
-COMP_END
+COMP_FUNC_END
 }
 
 int v_gt(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_gt(v1, v2);
-COMP_END
+COMP_FUNC_END
 }
 
 int v_ge(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_ge(v1, v2);
-COMP_END
+COMP_FUNC_END
 }
 
 int v_lt(const char *version1, const char *version2) {
@@ -148,7 +153,7 @@ int v_lt(const char *version1, const char *version2) {
 int v_le(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_le(v1, v2);
-COMP_END
+COMP_FUNC_END
 }
 
 int main(char *argv[], int argc) {
@@ -157,45 +162,48 @@ int main(char *argv[], int argc) {
 	for (int x=0;x<v->num_sections;x++) printf("%d\n", v->sections[x]);
 	free_version(v);
 
-	assert(v_eq("2.13.4.2.4", "4.2.13") == 0);
-	assert(v_eq("2.13.4.2.4", "2.2.13") == 0);
-	assert(v_eq("2.13.4.2.4", "2.13.4") == 0);
-	assert(v_eq("2.13.4", "2.13.4.2.4") == 0);
-	assert(v_eq("2.13.4", "2.13.4") == 1);
-	assert(v_eq("2.13.4", "2.13.2") == 0);
+	assert(v_eq("2.13.4.2.4", "4.2.13") == COMP_FALSE);
+	assert(v_eq("2.13.4.2.4", "2.2.13") == COMP_FALSE);
+	assert(v_eq("2.13.4.2.4", "2.13.4") == COMP_FALSE);
+	assert(v_eq("2.13.4", "2.13.4.2.4") == COMP_FALSE);
+	assert(v_eq("2.13.4", "2.13.4") == COMP_TRUE);
+	assert(v_eq("2.13.4", "2.13.2") == COMP_FALSE);
 
-	assert(v_ne("2.13.4.2.4", "4.2.13") == 1);
-	assert(v_ne("2.13.4.2.4", "2.2.13") == 1);
-	assert(v_ne("2.13.4.2.4", "2.13.4") == 1);
-	assert(v_ne("2.13.4", "2.13.4.2.4") == 1);
-	assert(v_ne("2.13.4", "2.13.4") == 0);
-	assert(v_ne("2.13.4", "2.13.2") == 1);
+	assert(v_ne("2.13.4.2.4", "4.2.13") == COMP_TRUE);
+	assert(v_ne("2.13.4.2.4", "2.2.13") == COMP_TRUE);
+	assert(v_ne("2.13.4.2.4", "2.13.4") == COMP_TRUE);
+	assert(v_ne("2.13.4", "2.13.4.2.4") == COMP_TRUE);
+	assert(v_ne("2.13.4", "2.13.4") == COMP_FALSE);
+	assert(v_ne("2.13.4", "2.13.2") == COMP_TRUE);
 
-	assert(v_gt("2.13.4.2.4", "4.2.13") == 0);
-	assert(v_gt("2.13.4.2.4", "2.2.13") == 1);
-	assert(v_gt("2.13.4.2.4", "2.13.4") == 1);
-	assert(v_gt("2.13.4", "2.13.4.2.4") == 0);
-	assert(v_gt("2.13.4", "2.13.4") == 0);
-	assert(v_gt("2.13.4", "2.3.4") == 1);
+	assert(v_gt("2.13.4.2.4", "4.2.13") == COMP_FALSE);
+	assert(v_gt("2.13.4.2.4", "2.2.13") == COMP_TRUE);
+	assert(v_gt("2.13.4.2.4", "2.13.4") == COMP_TRUE);
+	assert(v_gt("2.13.4.3.4", "2.13.4.2.28") == COMP_TRUE);
+	assert(v_gt("2.13.4", "2.13.4.2.4") == COMP_FALSE);
+	assert(v_gt("2.13.4", "2.13.4") == COMP_FALSE);
+	assert(v_gt("2.13.4", "2.3.4") == COMP_TRUE);
 
-	assert(v_ge("2.13.4.2.4", "4.2.13") == 0);
-	assert(v_ge("2.13.4.2.4", "2.2.13") == 1);
-	assert(v_ge("2.13.4.2.4", "2.13.4") == 1);
-	assert(v_ge("2.13.4", "2.13.4.2.4") == 0);
-	assert(v_ge("2.13.4", "2.13.4") == 1);
-	assert(v_ge("2.13.4", "2.3.4") == 1);
+	assert(v_ge("2.13.4.2.4", "4.2.13") == COMP_FALSE);
+	assert(v_ge("2.13.4.2.4", "2.2.13") == COMP_TRUE);
+	assert(v_ge("2.13.4.2.4", "2.13.4") == COMP_TRUE);
+	assert(v_ge("2.13.4.3.4", "2.13.4.2.28") == COMP_TRUE);
+	assert(v_ge("2.13.4", "2.13.4.2.4") == COMP_FALSE);
+	assert(v_ge("2.13.4", "2.13.4") == COMP_TRUE);
+	assert(v_ge("2.13.4", "2.3.4") == COMP_TRUE);
 
-	assert(v_lt("2.13.4.2.4", "4.2.13") == 1);
-	assert(v_lt("2.13.4.2.4", "2.2.13") == 0);
-	assert(v_lt("2.13.4.2.4", "2.13.4") == 0);
-	assert(v_lt("2.13.4", "2.13.4.2.4") == 1);
-	assert(v_lt("2.13.4", "2.13.4") == 0);
-	assert(v_lt("2.3.4", "2.13.4") == 1);
+	assert(v_lt("2.13.4.2.4", "4.2.13") == COMP_TRUE);
+	assert(v_lt("2.13.4.2.4", "2.2.13") == COMP_FALSE);
+	assert(v_lt("2.13.4.2.4", "2.13.4") == COMP_FALSE);
+	assert(v_lt("2.13.4.3.4", "2.13.4.2.28") == COMP_FALSE);
+	assert(v_lt("2.13.4", "2.13.4.2.4") == COMP_TRUE);
+	assert(v_lt("2.13.4", "2.13.4") == COMP_FALSE);
+	assert(v_lt("2.3.4", "2.13.4") == COMP_TRUE);
 
-	assert(v_le("2.13.4.2.4", "4.2.13") == 1);
-	assert(v_le("2.13.4.2.4", "2.2.13") == 0);
-	assert(v_le("2.13.4.2.4", "2.13.4") == 0);
-	assert(v_le("2.13.4", "2.13.4.2.4") == 1);
-	assert(v_le("2.13.4", "2.13.4") == 1);
-	assert(v_le("2.3.4", "2.13.4") == 1);
+	assert(v_le("2.13.4.2.4", "4.2.13") == COMP_TRUE);
+	assert(v_le("2.13.4.2.4", "2.2.13") == COMP_FALSE);
+	assert(v_le("2.13.4.2.4", "2.13.4") == COMP_FALSE);
+	assert(v_le("2.13.4", "2.13.4.2.4") == COMP_TRUE);
+	assert(v_le("2.13.4", "2.13.4") == COMP_TRUE);
+	assert(v_le("2.3.4", "2.13.4") == COMP_TRUE);
 }
