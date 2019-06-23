@@ -159,11 +159,9 @@ COMP_FUNC_END
 }
 
 int main(char *argv[], int argc) {
-	version_t *v = str_to_ver("2.2.35.4");
-	printf("sections: %d\n", v->num_sections);
-	for (int x=0;x<v->num_sections;x++) printf("%d\n", v->sections[x]);
-	free_version(v);
-
+	/* tests for the code above, should move to a separate
+	 * test file later.
+	 */
 	assert(v_eq("2.13.4.2.4", "4.2.13") == COMP_FALSE);
 	assert(v_eq("2.13.4.2.4", "2.2.13") == COMP_FALSE);
 	assert(v_eq("2.13.4.2.4", "2.13.4") == COMP_FALSE);
