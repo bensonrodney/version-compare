@@ -30,6 +30,12 @@ int vt_le(const version_t *v1, const version_t *v2);
 /* The following functions are the general purpose
  * comparison functions that only require strings as
  * input parameters.
+ *
+ * NOTE: when making comparisons, something that is
+ * the same but has more sections, even if they're
+ * all zero will be considered greater than the other,
+ * ie.:
+ *     "2.4.0" will evaluate as greater than "2.4"
  */
 int v_eq(const char *version1, const char *version2);
 int v_ne(const char *version1, const char *version2);
