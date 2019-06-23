@@ -15,6 +15,7 @@ version_t *new_version() {
 	version_t *v = (version_t *)malloc(sizeof(version_t));
 	if (!v) return NULL;
 	v->num_sections = 0;
+	v->sections = NULL;
 	return v;
 }
 
