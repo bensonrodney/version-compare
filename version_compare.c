@@ -8,16 +8,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
+#include "version_compare.h"
 
-// Comparison results
-#define COMP_ERROR -1
-#define COMP_TRUE 1
-#define COMP_FALSE 0
-
-typedef struct {
-	uint8_t num_sections;
-	int *sections;
-} version_t;
 
 version_t *new_version() {
 	version_t *v = (version_t *)malloc(sizeof(version_t));
@@ -39,9 +31,15 @@ version_t *str_to_ver(const char *verstr) {
 	char *remain = dup;
 	char *token = NULL;
 	int subv = 0;
+	int sr = 0;
 
 	while ((token = strtok_r(remain, ".", &remain))) {
-		subv = atoi(token);
+		sr = sscanf(token, "%d", &subv);
+		if (sr != 1) {
+			free_version(v);
+			v = NULL;
+			goto cleanup;
+		}
 		if (v->num_sections > 0) {
 			v->sections = (int *) realloc(v->sections, (v->num_sections + 1) * sizeof(int));
 		} else {
@@ -50,6 +48,7 @@ version_t *str_to_ver(const char *verstr) {
 
 		v->sections[v->num_sections++] = subv;
 	}
+cleanup:
 	if (dup) free (dup);
 	return v; 
 }
@@ -78,6 +77,8 @@ cleanup: \
 	free_version(v2); \
 	return rv; \
 
+
+/* version_t BASED COMPARISON FUNCTIONS */
 int vt_eq(const version_t *v1, const version_t *v2) {
 	int rv = COMP_FALSE;
 	int sections = min_sections(v1, v2);
@@ -122,6 +123,7 @@ int vt_le(const version_t *v1, const version_t *v2) {
 	return vt_lt(v1, v2);
 }
 
+/* STRING BASED COMPARISON FUNCTIONS */
 int v_eq(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_eq(v1, v2);
@@ -206,4 +208,9 @@ int main(char *argv[], int argc) {
 	assert(v_le("2.13.4", "2.13.4.2.4") == COMP_TRUE);
 	assert(v_le("2.13.4", "2.13.4") == COMP_TRUE);
 	assert(v_le("2.3.4", "2.13.4") == COMP_TRUE);
+
+	assert(v_eq("apple78pear.4.5", "0.4.5") == COMP_ERROR);
+	assert(v_eq("3.4.5", "0.apple.5") == COMP_ERROR);
+
+	return 0;
 }
