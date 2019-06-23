@@ -59,25 +59,6 @@ int min_sections(const version_t *v1, const version_t *v2) {
 	return v1->num_sections < v2->num_sections ? v1->num_sections : v2->num_sections; 
 }
 
-// used at the start of a comparison function that takes
-// two strings as the versions
-#define CONVERT_VERSION_STRINGS \
-	version_t *v1 = str_to_ver(version1); \
-	version_t *v2 = str_to_ver(version2); \
-	if (!v1 || !v2) { \
-		free_version(v1); \
-		free_version(v2); \
-		return COMP_ERROR; \
-	} \
-
-// used at the end of a comparison funtion that takes two
-// strings as the versions
-#define COMP_FUNC_END \
-cleanup: \
-	free_version(v1); \
-	free_version(v2); \
-	return rv; \
-
 
 /* version_t BASED COMPARISON FUNCTIONS */
 int vt_eq(const version_t *v1, const version_t *v2) {
@@ -125,6 +106,26 @@ int vt_le(const version_t *v1, const version_t *v2) {
 }
 
 /* STRING BASED COMPARISON FUNCTIONS */
+
+// used at the start of a comparison function that takes
+// two strings as the versions
+#define CONVERT_VERSION_STRINGS \
+	version_t *v1 = str_to_ver(version1); \
+	version_t *v2 = str_to_ver(version2); \
+	if (!v1 || !v2) { \
+		free_version(v1); \
+		free_version(v2); \
+		return COMP_ERROR; \
+	} \
+
+// used at the end of a comparison funtion that takes two
+// strings as the versions
+#define COMP_FUNC_END \
+cleanup: \
+	free_version(v1); \
+	free_version(v2); \
+	return rv; \
+
 int v_eq(const char *version1, const char *version2) {
 	CONVERT_VERSION_STRINGS
 	int rv = vt_eq(v1, v2);
